@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
 
 extern unsigned long *ip_array;
 extern unsigned int ip_array_size;
@@ -16,6 +17,12 @@ extern unsigned int ip_array_last;
 extern unsigned int syncount;
 extern unsigned int arpcount;
 extern unsigned int blacklistcount;
+
+volatile unsigned long syntrue = 0;
+volatile unsigned long arptrue = 0;
+volatile unsigned long blacklisttrue = 0;
+
+pthread_mutex_t countlock = PTHREAD_MUTEX_INITIALIZER;
 
 int array_contains(unsigned long *ip_array, unsigned int ip_array_size, unsigned long address){
   for(int i = 0; i <= ip_array_size; i++) {
@@ -63,7 +70,7 @@ void analyse(struct pcap_pkthdr *header,
   if(tcp_head != NULL){ //check if the tcp header is 
     if(tcp_head->syn && !tcp_head->urg && !tcp_head->ack && !tcp_head->psh && !tcp_head->rst && !tcp_head->fin){ //check if syn bit is active and all other flags are inactive
       //printf("Testing");
-      syncount++; 
+      syntrue++; 
       
       unsigned long src_addr = (ip_head -> ip_src).s_addr;
 
@@ -93,7 +100,7 @@ void analyse(struct pcap_pkthdr *header,
   //{{SECTION: ARP poisoning}}
   if(ethernet_type == ETH_P_ARP){
     //printf("ARP packet found");
-    arpcount++;
+    arptrue++;
     //printf("%d", arpcount);
     
   }
@@ -116,12 +123,21 @@ void analyse(struct pcap_pkthdr *header,
             printf("Destination IP address: %s\n", inet_ntoa(dest_addr));
             printf("==============================\n");
 
-            blacklistcount++;
+            blacklisttrue++;
             //printf("black");
         }
       }
     }
   }  
   //{{END SECTION: Checking for blacklisted URL}}
+
+
+  //{{SECTION: Adding to global variables safely from thread}}
+  pthread_mutex_lock(&countlock);
+  if(syntrue == 1) syncount++;
+  if(arptrue == 1) arpcount++;
+  if(blacklisttrue == 1) blacklistcount++;
+  pthread_mutex_unlock(&countlock);
+
 }
 
