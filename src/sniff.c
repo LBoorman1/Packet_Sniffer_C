@@ -47,32 +47,15 @@ void sniff(char *interface, int verbose) {
   
   signal(SIGINT, INThandler);
   
-  struct pcap_pkthdr header;
-  const unsigned char *packet;
+  // struct pcap_pkthdr header;
+  // const unsigned char *packet;
   
   // Capture packet one packet everytime the loop runs using pcap_next(). This is inefficient.
   // A more efficient way to capture packets is to use use pcap_loop() instead of pcap_next().
   // See the man pages of both pcap_loop() and pcap_next().
 
-  while (1) {
-    
-    // Capture a  packet
-    packet = pcap_next(pcap_handle, &header);
-    if (packet == NULL) {
-      // pcap_next can return null if no packet is seen within a timeout
-      if (verbose) {
-        printf("No packet received. %s\n", pcap_geterr(pcap_handle));
-      }
-    } else {
-      // If verbose is set to 1, dump raw packet to terminal
-      if (verbose) {
-        dump(packet, header.len);
-      }
-      // Dispatch packet for processing
-      
-      dispatch(&header, packet, verbose);
-    }
-  }
+  pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);
+   
 }
 
 // Utility/Debugging method for dumping raw packet data
