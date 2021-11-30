@@ -5,6 +5,8 @@
 #include <pcap.h>
 #include <signal.h>
 #include <netinet/if_ether.h>
+#include <pthread.h>
+
 
 
 
@@ -15,6 +17,8 @@ unsigned int ip_array_last = 0;
 unsigned int syncount = 0;
 unsigned int arpcount = 0;
 unsigned int blacklistcount = 0;
+
+
 
 
 void  INThandler(int sig)
@@ -45,6 +49,8 @@ void sniff(char *interface, int verbose) {
     printf("SUCCESS! Opened %s for capture\n", interface);
   }
   
+  threadInit();
+
   signal(SIGINT, INThandler);
   
   // struct pcap_pkthdr header;
