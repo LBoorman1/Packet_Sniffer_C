@@ -14,13 +14,12 @@
 //global variables needed including the array of unique ip addresses
 extern unsigned long *ip_array;
 extern unsigned int ip_array_size;
-extern unsigned int ip_array_last;
+extern unsigned int ip_array_last; //alows me to print the number of unique ip addresses
 extern unsigned int syncount;
 extern unsigned int arpcount;
 extern unsigned int blacklistcount;
 
-//threading variables
-pthread_mutex_t countlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t countlock = PTHREAD_MUTEX_INITIALIZER; //lock to add to global count variables
 
 int array_contains(unsigned long *ip_array, unsigned int ip_array_size, unsigned long address){
   for(int i = 0; i <= ip_array_size; i++) {
@@ -34,7 +33,6 @@ void analyse(
   int verbose) {
 
   //local flags to update global counts
-  printf("analyse reached");
   int syntrue = 0;
   int arptrue = 0;
   int blacklisttrue = 0;
@@ -47,36 +45,33 @@ void analyse(
   //{{SECTION: Parsing the packets}}
   struct ether_header *eth_header = (struct ether_header *) packet;
   
-  //payload method to get out ip header
-  const unsigned char *payload_ip = packet + ETH_HLEN;
+  const unsigned char *payload_ip = packet + ETH_HLEN; //payload method to get out ip header like in dump function from sniff.c
 
   unsigned short ethernet_type = ntohs(eth_header->ether_type); //convert the header type so can compare
   
-  if(ethernet_type == ETH_P_IP) {
+  if(ethernet_type == ETH_P_IP) { //from in.h header file
 
     ip_head = (struct ip *) payload_ip; //take out the ip header from the payload
     
-    //payload method to get out tcp header
     const unsigned char *payload_tcp = packet + ETH_HLEN + ip_head->ip_hl*4; //ip_hl is in 4 byte words so *4 to get length in bytes
     
-    //no need to use ntohs, already appropriately typed
-    if(ip_head->ip_p == IPPROTO_TCP) {
+    
+    if(ip_head->ip_p == IPPROTO_TCP) { //no need to use ntohs, already appropriately typed
       tcp_head = (struct tcphdr *) payload_tcp;
-      payload_total = packet + ETH_HLEN + ip_head->ip_hl*4 + tcp_head->doff*4; //
+      payload_total = packet + ETH_HLEN + ip_head->ip_hl*4 + tcp_head->doff*4; //will be used later to check blacklisted ip addresses
     }
     
   //{{END SECTION: Parsing the packets}}
 
 
   //{{SECTION: Checking for SYN attacks}}
-  if(tcp_head != NULL){ //check if the tcp header is 
+  if(tcp_head != NULL){
     if(tcp_head->syn && !tcp_head->urg && !tcp_head->ack && !tcp_head->psh && !tcp_head->rst && !tcp_head->fin){ //check if syn bit is active and all other flags are inactive
       //printf("Testing");
       syntrue++; 
       
-      unsigned long src_addr = (ip_head -> ip_src).s_addr;
-
-      //unique ip address to add
+      unsigned long src_addr = (ip_head -> ip_src).s_addr; //source address to add to array if it is unique
+      
       if(array_contains(ip_array, ip_array_size, src_addr) == 0){
         
         if(ip_array_last == ip_array_size){
@@ -97,23 +92,18 @@ void analyse(
   }
   //{{END SECTION: Checking for SYN attacks}}
 
-
-
   //{{SECTION: ARP poisoning}}
   if(ethernet_type == ETH_P_ARP){
-    //printf("ARP packet found");
     arptrue++;
-    //printf("%d", arpcount);
-    
   }
   //{{END SECTION: Checking for ARP poisoning}}
 
   //{{SECTION: Checking for blacklisted URL}}
   if(tcp_head != NULL){
-    if(ntohs(tcp_head->dest) == 80 || ntohs(tcp_head->dest) == 8080){
-      const char *hosttest = strstr((const char *)payload_total, "Host:");
+    if(ntohs(tcp_head->dest) == 80 || ntohs(tcp_head->dest) == 8080){ //checks the ports for http and https
+      const char *hosttest = strstr((const char *)payload_total, "Host:"); //goes to the first instance of "Host:" in the packet payload
       if(hosttest != NULL){
-        if(strstr(hosttest, "www.bbc.com") != NULL || strstr(hosttest, "www.google.co.uk") != NULL ){
+        if(strstr(hosttest, "www.bbc.com") != NULL || strstr(hosttest, "www.google.co.uk") != NULL ){ //checks if the blacklisted urls are contained in the host string
             
             struct in_addr source_addr = (ip_head -> ip_src);
             struct in_addr dest_addr = (ip_head -> ip_dst);
@@ -121,7 +111,7 @@ void analyse(
             //print the source and destination ip address of the blacklisted url violation           
             printf("\n==============================\n");
             printf("Blacklisted URL violation detected\n");
-            printf("Source IP address: %s\n", inet_ntoa(source_addr));
+            printf("Source IP address: %s\n", inet_ntoa(source_addr)); //gets the in_addr in the correct format to print
             printf("Destination IP address: %s\n", inet_ntoa(dest_addr));
             printf("==============================\n");
 
@@ -132,9 +122,8 @@ void analyse(
   }  
   //{{END SECTION: Checking for blacklisted URL}}
 
-
   //{{SECTION: Adding to global variables safely from thread}}
-  pthread_mutex_lock(&countlock);
+  pthread_mutex_lock(&countlock); //lock to keep thread safe
   if(syntrue == 1) syncount++;
   if(arptrue == 1) arpcount++;
   if(blacklisttrue == 1) blacklistcount++;

@@ -3,7 +3,7 @@
 
 #include <pcap.h>
 
-void dispatch(u_char *args, struct pcap_pkthdr *header,
-              const unsigned char *packet);
+void dispatch(u_char *args, struct pcap_pkthdr *header, const unsigned char *packet);
+void threadInit(void);
 
 #endif
