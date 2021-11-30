@@ -10,6 +10,9 @@ pthread_t threads[20]; //thread id array
 pthread_cond_t queueCond = PTHREAD_COND_INITIALIZER; //condition variable for the threads
 pthread_mutex_t queueLock = PTHREAD_MUTEX_INITIALIZER; //mutex lock to read and write to the queue
 
+void destroyQueue(void){
+  destroy_queue(work_queue);
+}
 
 //function to deal with the packets in the queue
 void * threadCode(void *arg){

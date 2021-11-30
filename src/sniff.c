@@ -18,9 +18,7 @@ unsigned int syncount = 0;
 unsigned int arpcount = 0;
 unsigned int blacklistcount = 0;
 
-
-
-
+//catches ctrl-c
 void  INThandler(int sig)
 {
   int numberToPrint; //helps sort out the logic used to assign ip_array_last
@@ -30,10 +28,10 @@ void  INThandler(int sig)
   printf("%d SYN packets detected from %d unique IP addresses\n", syncount, numberToPrint);
   printf("%d ARP responses (cache poisoning)\n", arpcount);
   printf("%d URL Blacklist Violations\n", blacklistcount);
+  destroyQueue(); //calls dispatch.c function to make sure that the queue does not hang
   free(ip_array);
   exit(0);
 }
-
 
 // Application main sniffing loop
 void sniff(char *interface, int verbose) {
@@ -53,18 +51,8 @@ void sniff(char *interface, int verbose) {
   }
   
   threadInit();
-
   signal(SIGINT, INThandler);
-  
-  // struct pcap_pkthdr header;
-  // const unsigned char *packet;
-  
-  // Capture packet one packet everytime the loop runs using pcap_next(). This is inefficient.
-  // A more efficient way to capture packets is to use use pcap_loop() instead of pcap_next().
-  // See the man pages of both pcap_loop() and pcap_next().
-
-  pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);
-   
+  pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);   
 }
 
 // Utility/Debugging method for dumping raw packet data
