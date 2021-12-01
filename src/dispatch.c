@@ -4,9 +4,11 @@
 #include <pthread.h>
 #include "analysis.h"
 #include "queue.h"
+extern pthread_t threads[20];
+extern int killProgram;
+
 
 struct queue *work_queue; //packet queue
-pthread_t threads[20]; //thread id array
 pthread_cond_t queueCond = PTHREAD_COND_INITIALIZER; //condition variable for the threads
 pthread_mutex_t queueLock = PTHREAD_MUTEX_INITIALIZER; //mutex lock to read and write to the queue
 
@@ -21,6 +23,10 @@ void * threadCode(void *arg){
   while(1){
     pthread_mutex_lock(&queueLock);
 		while(isempty(work_queue)){  
+      if (killProgram){
+        pthread_mutex_unlock(&queueLock);
+        return 0;
+      }
 		  pthread_cond_wait(&queueCond,&queueLock);
 		}
 		packet=work_queue->head->item;   //take the packet from the queue

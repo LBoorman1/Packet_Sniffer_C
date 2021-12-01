@@ -71,7 +71,6 @@ void analyse(
       syntrue++; 
       
       unsigned long src_addr = (ip_head -> ip_src).s_addr; //source address to add to array if it is unique
-      
       if(array_contains(ip_array, ip_array_size, src_addr) == 0){
         
         if(ip_array_last == ip_array_size){

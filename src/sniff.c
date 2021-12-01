@@ -10,7 +10,12 @@
 
 
 
+extern pthread_cond_t queueCond; //condition variable for the threads
+
 //global variables for new atttempt
+pcap_t *pcap_handle;
+pthread_t threads[20]; //thread id array
+int killProgram = 0; 
 unsigned long *ip_array;
 unsigned int ip_array_size = 20;
 unsigned int ip_array_last = 0;
@@ -21,6 +26,11 @@ unsigned int blacklistcount = 0;
 //catches ctrl-c
 void  INThandler(int sig)
 {
+  pcap_breakloop(pcap_handle);
+  killProgram = 1;
+}
+
+void endOfProgram(){
   int numberToPrint; //helps sort out the logic used to assign ip_array_last
   if(ip_array_last == 0) numberToPrint = 0;
   else numberToPrint = ip_array_last+1;
@@ -30,7 +40,6 @@ void  INThandler(int sig)
   printf("%d URL Blacklist Violations\n", blacklistcount);
   destroyQueue(); //calls dispatch.c function to make sure that the queue does not hang
   free(ip_array);
-  exit(0);
 }
 
 // Application main sniffing loop
@@ -42,7 +51,7 @@ void sniff(char *interface, int verbose) {
 
   // Open the specified network interface for packet capture. pcap_open_live() returns the handle to be used for the packet
   // capturing session. check the man page of pcap_open_live()
-  pcap_t *pcap_handle = pcap_open_live(interface, 4096, 1, 1000, errbuf);
+  pcap_handle = pcap_open_live(interface, 4096, 1, 1000, errbuf);
   if (pcap_handle == NULL) {
     fprintf(stderr, "Unable to open interface %s\n", errbuf);
     exit(EXIT_FAILURE);
@@ -53,6 +62,13 @@ void sniff(char *interface, int verbose) {
   threadInit();
   signal(SIGINT, INThandler);
   pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);   
+  pthread_cond_broadcast(&queueCond);
+  pcap_close(pcap_handle);
+  endOfProgram();
+  for (int i = 0; i < 20; i++){
+    (void) pthread_join(threads[i], NULL);
+  }
+  exit(0);
 }
 
 // Utility/Debugging method for dumping raw packet data
