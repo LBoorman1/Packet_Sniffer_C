@@ -1,0 +1,6 @@
+to-do
+find way to join threads and end program safely.
+check if can fix race conditions
+tidy up verbose shit
+comment files well & just tidy up in general
+write up final report

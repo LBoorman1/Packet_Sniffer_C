@@ -6,4 +6,6 @@
 void dispatch(u_char *args, struct pcap_pkthdr *header,
               const unsigned char *packet);
 
+void * threadCode(void* arg);
+
 #endif

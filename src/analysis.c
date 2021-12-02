@@ -19,7 +19,10 @@ extern unsigned int syncount;
 extern unsigned int arpcount;
 extern unsigned int blacklistcount;
 
-pthread_mutex_t countlock = PTHREAD_MUTEX_INITIALIZER;
+//update global vars lock initialise
+pthread_mutex_t countLock = PTHREAD_MUTEX_INITIALIZER;
+//updating array lock
+pthread_mutex_t arrayLock = PTHREAD_MUTEX_INITIALIZER;
 
 int array_contains(unsigned long *ip_array, unsigned int ip_array_size, unsigned long address){
   for(int i = 0; i <= ip_array_size; i++) {
@@ -28,22 +31,34 @@ int array_contains(unsigned long *ip_array, unsigned int ip_array_size, unsigned
   return 0;
 }
 
-void analyse(struct pcap_pkthdr *header,
+void updateGlobalVars(int syntrue, int arptrue, int blacklisttrue){
+  if(syntrue){
+    syncount++;
+  }
+  if(arptrue){
+    arpcount++;
+  }
+  if(blacklisttrue){
+    blacklistcount++;
+  }
+}
+
+
+void analyse(
   const unsigned char *packet,
   //const unsigned char *payload_total;
   int verbose) {
-
-  // //local flags to update global counts
-  // volatile unsigned long syntrue = 0;
-  // volatile unsigned long arptrue = 0;
-  // volatile unsigned long blacklisttrue = 0;
 
   //struct definitions
   struct tcphdr *tcp_head;
   struct ip *ip_head;
   const unsigned char *payload_total;
 
-  
+  //local flags for checks
+  int syntrue = 0;
+  int arptrue = 0;
+  int blacklisttrue = 0;
+
   //{{SECTION: Parsing the packets}}
   struct ether_header *eth_header = (struct ether_header *) packet;
   
@@ -72,11 +87,12 @@ void analyse(struct pcap_pkthdr *header,
   if(tcp_head != NULL){ //check if the tcp header is 
     if(tcp_head->syn && !tcp_head->urg && !tcp_head->ack && !tcp_head->psh && !tcp_head->rst && !tcp_head->fin){ //check if syn bit is active and all other flags are inactive
       //printf("Testing");
-      syncount++; 
+      syntrue++; 
       
       unsigned long src_addr = (ip_head -> ip_src).s_addr;
 
       //unique ip address to add
+      pthread_mutex_lock(&arrayLock);
       if(array_contains(ip_array, ip_array_size, src_addr) == 0){
         
         if(ip_array_last == ip_array_size){
@@ -91,6 +107,7 @@ void analyse(struct pcap_pkthdr *header,
           ip_array_last+=1;
         }  
       }
+      pthread_mutex_unlock(&arrayLock);
 
     }    
   }
@@ -102,7 +119,7 @@ void analyse(struct pcap_pkthdr *header,
   //{{SECTION: ARP poisoning}}
   if(ethernet_type == ETH_P_ARP){
     //printf("ARP packet found");
-    arpcount++;
+    arptrue++;
     //printf("%d", arpcount);
     
   }
@@ -125,8 +142,7 @@ void analyse(struct pcap_pkthdr *header,
             printf("Destination IP address: %s\n", inet_ntoa(dest_addr));
             printf("==============================\n");
 
-            blacklistcount++;
-            //printf("black");
+            blacklisttrue++;
         }
       }
     }
@@ -135,6 +151,9 @@ void analyse(struct pcap_pkthdr *header,
 
 
   //{{SECTION: Adding to global variables safely from thread}}
+  pthread_mutex_lock(&countLock);
+  updateGlobalVars(syntrue, arptrue, blacklisttrue);
+  pthread_mutex_unlock(&countLock);
 
 }
 

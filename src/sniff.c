@@ -5,8 +5,12 @@
 #include <pcap.h>
 #include <signal.h>
 #include <netinet/if_ether.h>
+#include <pthread.h>
+#include "queue.h"
 
+#define threadcount 20
 
+extern pthread_cond_t queueCond;
 
 //global variables for new atttempt
 unsigned long *ip_array;
@@ -15,17 +19,42 @@ unsigned int ip_array_last = 0;
 unsigned int syncount = 0;
 unsigned int arpcount = 0;
 unsigned int blacklistcount = 0;
+pthread_t threads[threadcount];
 
+//queue struct definition
+struct queue * workQueue;
+int killProgram = 0;
 
 void  INThandler(int sig)
-{
-     printf("\nIntrusion Detection Report:\n");
-     printf("%d SYN packets detected from %d unique IP addresses\n", syncount, ip_array_last+1);
-     printf("%d ARP responses (cache poisoning)\n", arpcount);
-     printf("%d URL Blacklist Violations\n", blacklistcount);
-     free(ip_array);
-     exit(0);
+{   
+  pthread_cond_broadcast(&queueCond);
+  killProgram = 1;
 }
+
+void endProgram(){
+  if(killProgram){
+    void *returnval;
+    for(int i = 0; i < threadcount; i++){
+      pthread_join(threads[i], &returnval);
+    }
+    int numberToPrint;
+    
+    //to help adjust the logic used to set ip_array_last
+    if(ip_array_last == 0){
+      numberToPrint = 0;
+    }
+    else {
+      numberToPrint = ip_array_last+1;
+    }
+    printf("\nIntrusion Detection Report:\n");
+    printf("%d SYN packets detected from %d unique IP addresses\n", syncount, numberToPrint);
+    printf("%d ARP responses (cache poisoning)\n", arpcount);
+    printf("%d URL Blacklist Violations\n", blacklistcount);
+    free(ip_array);
+     exit(0);
+  }
+}
+
 
 
 // Application main sniffing loop
@@ -35,8 +64,6 @@ void sniff(char *interface, int verbose) {
 
   char errbuf[PCAP_ERRBUF_SIZE];
 
-  // Open the specified network interface for packet capture. pcap_open_live() returns the handle to be used for the packet
-  // capturing session. check the man page of pcap_open_live()
   pcap_t *pcap_handle = pcap_open_live(interface, 4096, 1, 1000, errbuf);
   if (pcap_handle == NULL) {
     fprintf(stderr, "Unable to open interface %s\n", errbuf);
@@ -47,14 +74,17 @@ void sniff(char *interface, int verbose) {
   
   signal(SIGINT, INThandler);
   
-  // struct pcap_pkthdr header;
-  // const unsigned char *packet;
+  //create queue
+  workQueue = create_queue();
   
-  // Capture packet one packet everytime the loop runs using pcap_next(). This is inefficient.
-  // A more efficient way to capture packets is to use use pcap_loop() instead of pcap_next().
-  // See the man pages of both pcap_loop() and pcap_next().
+  //create threads
+   for (int i = 0; i < threadcount; i++) {
+    pthread_create(&threads[i], NULL, &threadCode, NULL);
+  }
 
   pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);
+  pcap_close(pcap_handle);
+  endProgram();
    
 }
 
