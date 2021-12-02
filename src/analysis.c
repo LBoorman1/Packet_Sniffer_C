@@ -44,11 +44,7 @@ void updateGlobalVars(int syntrue, int arptrue, int blacklisttrue){
 }
 
 
-void analyse(
-  const unsigned char *packet,
-  //const unsigned char *payload_total;
-  int verbose) {
-
+void analyse(const unsigned char *packet, int verbose) {
   //struct definitions
   struct tcphdr *tcp_head;
   struct ip *ip_head;

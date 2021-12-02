@@ -4,6 +4,7 @@
 #include "queue.h"
 #include "analysis.h"
 #include <pthread.h>
+#include <stdlib.h>
 
 
 extern int killProgram;
@@ -36,13 +37,12 @@ void * threadCode(void*arg){
     if(packet!=NULL){
       analyse(packet, verbose);
     }
+    free(packet);
   }
 }
 
 
-void dispatch(u_char *args, struct pcap_pkthdr *header,
-              const unsigned char *packet) {
-
+void dispatch(u_char *args, struct pcap_pkthdr *header, const unsigned char *packet) {
   int verbose = (int)*args;
   if(verbose){
     dump(packet, header->len);

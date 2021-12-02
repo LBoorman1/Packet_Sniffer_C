@@ -25,11 +25,7 @@ pthread_t threads[threadcount];
 struct queue * workQueue;
 int killProgram = 0;
 
-void  INThandler(int sig)
-{   
-  pthread_cond_broadcast(&queueCond);
-  killProgram = 1;
-}
+
 
 void endProgram(){
   if(killProgram){
@@ -50,11 +46,19 @@ void endProgram(){
     printf("%d SYN packets detected from %d unique IP addresses\n", syncount, numberToPrint);
     printf("%d ARP responses (cache poisoning)\n", arpcount);
     printf("%d URL Blacklist Violations\n", blacklistcount);
+    destroy_queue(workQueue);
     free(ip_array);
-     exit(0);
+    exit(0);
   }
 }
 
+void  INThandler(int sig)
+{   
+  printf("ctrl-c hits function");
+  pthread_cond_broadcast(&queueCond);
+  killProgram = 1;
+  endProgram();
+}
 
 
 // Application main sniffing loop
@@ -83,7 +87,7 @@ void sniff(char *interface, int verbose) {
   }
 
   pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);
-  pcap_close(pcap_handle);
+  //pcap_close(pcap_handle);
   endProgram();
    
 }
