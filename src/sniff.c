@@ -11,6 +11,7 @@
 #define threadcount 20
 
 extern pthread_cond_t queueCond;
+pcap_t *pcap_handle;
 
 //global variables for new atttempt
 unsigned long *ip_array;
@@ -28,36 +29,27 @@ int killProgram = 0;
 
 
 void endProgram(){
-  if(killProgram){
-    void *returnval;
-    for(int i = 0; i < threadcount; i++){
-      pthread_join(threads[i], &returnval);
-    }
-    int numberToPrint;
+  int numberToPrint;
     
-    //to help adjust the logic used to set ip_array_last
-    if(ip_array_last == 0){
-      numberToPrint = 0;
-    }
-    else {
-      numberToPrint = ip_array_last+1;
-    }
-    printf("\nIntrusion Detection Report:\n");
-    printf("%d SYN packets detected from %d unique IP addresses\n", syncount, numberToPrint);
-    printf("%d ARP responses (cache poisoning)\n", arpcount);
-    printf("%d URL Blacklist Violations\n", blacklistcount);
-    destroy_queue(workQueue);
-    free(ip_array);
-    exit(0);
+  //to help adjust the logic used to set ip_array_last
+  if(ip_array_last == 0){
+    numberToPrint = 0;
   }
+  else {
+    numberToPrint = ip_array_last+1;
+  }
+  printf("\nIntrusion Detection Report:\n");
+  printf("%d SYN packets detected from %d unique IP addresses\n", syncount, numberToPrint);
+  printf("%d ARP responses (cache poisoning)\n", arpcount);
+  printf("%d URL Blacklist Violations\n", blacklistcount);
+  destroy_queue(workQueue);
+  free(ip_array);
 }
 
 void  INThandler(int sig)
 {   
-  printf("ctrl-c hits function");
-  pthread_cond_broadcast(&queueCond);
+  pcap_breakloop(pcap_handle);
   killProgram = 1;
-  endProgram();
 }
 
 
@@ -68,7 +60,7 @@ void sniff(char *interface, int verbose) {
 
   char errbuf[PCAP_ERRBUF_SIZE];
 
-  pcap_t *pcap_handle = pcap_open_live(interface, 4096, 1, 1000, errbuf);
+  pcap_handle = pcap_open_live(interface, 4096, 1, 1000, errbuf);
   if (pcap_handle == NULL) {
     fprintf(stderr, "Unable to open interface %s\n", errbuf);
     exit(EXIT_FAILURE);
@@ -76,7 +68,7 @@ void sniff(char *interface, int verbose) {
     printf("SUCCESS! Opened %s for capture\n", interface);
   }
   
-  signal(SIGINT, INThandler);
+  
   
   //create queue
   workQueue = create_queue();
@@ -86,9 +78,18 @@ void sniff(char *interface, int verbose) {
     pthread_create(&threads[i], NULL, &threadCode, NULL);
   }
 
+  signal(SIGINT, INThandler);
   pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);
-  //pcap_close(pcap_handle);
+  
+  //dealing with end of program
+  pthread_cond_broadcast(&queueCond);
+  pcap_close(pcap_handle);
   endProgram();
+  for(int i = 0; i < threadcount; i++){
+    pthread_join(threads[i], NULL);
+  }
+  exit(0);
+
    
 }
 

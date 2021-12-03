@@ -37,7 +37,6 @@ void * threadCode(void*arg){
     if(packet!=NULL){
       analyse(packet, verbose);
     }
-    free(packet);
   }
 }
 
