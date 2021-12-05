@@ -23,6 +23,8 @@ void * threadCode(void*arg){
   //while loop to be exited later with variable
   while(1){
     pthread_mutex_lock(&queueLock);
+    
+    //if queue is empty, wait until a packet is added
     while(isempty(workQueue)){
       if (killProgram){
         pthread_mutex_unlock(&queueLock);

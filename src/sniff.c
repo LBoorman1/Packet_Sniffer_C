@@ -24,28 +24,20 @@ pthread_t threads[threadcount];
 
 //queue struct definition
 struct queue * workQueue;
-int killProgram = 0;
 
+int killProgram = 0; //tells threads when to stop 
 
-
+//function to endprogram as printing is not signal safe
 void endProgram(){
-  int numberToPrint;
-    
-  //to help adjust the logic used to set ip_array_last
-  if(ip_array_last == 0){
-    numberToPrint = 0;
-  }
-  else {
-    numberToPrint = ip_array_last+1;
-  }
   printf("\nIntrusion Detection Report:\n");
-  printf("%d SYN packets detected from %d unique IP addresses\n", syncount, numberToPrint);
+  printf("%d SYN packets detected from %d unique IP addresses\n", syncount, ip_array_last);
   printf("%d ARP responses (cache poisoning)\n", arpcount);
   printf("%d URL Blacklist Violations\n", blacklistcount);
   destroy_queue(workQueue);
   free(ip_array);
 }
 
+//catches ctrl-c 
 void  INThandler(int sig)
 {   
   pcap_breakloop(pcap_handle);
@@ -53,9 +45,10 @@ void  INThandler(int sig)
 }
 
 
-// Application main sniffing loop
+//Application main sniffing loop
 void sniff(char *interface, int verbose) {
 
+  //initialise the ip_array with memory
   ip_array = (unsigned long *)malloc(sizeof(unsigned long)*ip_array_size);
 
   char errbuf[PCAP_ERRBUF_SIZE];
@@ -78,7 +71,10 @@ void sniff(char *interface, int verbose) {
     pthread_create(&threads[i], NULL, &threadCode, NULL);
   }
 
+  //function handler for ctrl-c
   signal(SIGINT, INThandler);
+
+  //changed to pcap_loop instead of pcap_next
   pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);
   
   //dealing with end of program

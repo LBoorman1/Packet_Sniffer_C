@@ -31,7 +31,8 @@ int array_contains(unsigned long *ip_array, unsigned int ip_array_size, unsigned
   return 0;
 }
 
-void updateGlobalVars(int syntrue, int arptrue, int blacklisttrue){
+//function to handle incrementing global variables
+void update_global_vars(int syntrue, int arptrue, int blacklisttrue){
   if(syntrue){
     syncount++;
   }
@@ -95,13 +96,8 @@ void analyse(const unsigned char *packet, int verbose) {
           ip_array_size*=2;
           ip_array = (unsigned long *)realloc(ip_array, ip_array_size*sizeof(unsigned long));
         }
-
-        if(ip_array[0] == 0) {
-          ip_array[0] = src_addr;
-        } else {
-          ip_array[ip_array_last+1] = src_addr;
-          ip_array_last+=1;
-        }  
+        ip_array[ip_array_last] = src_addr;
+        ip_array_last+=1;
       }
       pthread_mutex_unlock(&arrayLock);
 
@@ -148,7 +144,7 @@ void analyse(const unsigned char *packet, int verbose) {
 
   //{{SECTION: Adding to global variables safely from thread}}
   pthread_mutex_lock(&countLock);
-  updateGlobalVars(syntrue, arptrue, blacklisttrue);
+  update_global_vars(syntrue, arptrue, blacklisttrue);
   pthread_mutex_unlock(&countLock);
 
 }
