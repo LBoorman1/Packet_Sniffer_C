@@ -19,12 +19,18 @@ unsigned int blacklistcount = 0;
 
 void  INThandler(int sig)
 {
-     printf("\nIntrusion Detection Report:\n");
-     printf("%d SYN packets detected from %d unique IP addresses\n", syncount, ip_array_last+1);
-     printf("%d ARP responses (cache poisoning)\n", arpcount);
-     printf("%d URL Blacklist Violations\n", blacklistcount);
-     free(ip_array);
-     exit(0);
+  int numberToPrint;
+  if(ip_array_last == 0){
+    numberToPrint = 0;
+  } else {
+    numberToPrint = ip_array_last+1;
+  }
+  printf("\nIntrusion Detection Report:\n");
+  printf("%d SYN packets detected from %d unique IP addresses\n", syncount, numberToPrint);
+  printf("%d ARP responses (cache poisoning)\n", arpcount);
+  printf("%d URL Blacklist Violations\n", blacklistcount);
+  free(ip_array);
+  exit(0);
 }
 
 
