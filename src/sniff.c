@@ -7,35 +7,33 @@
 #include <netinet/if_ether.h>
 
 
-//global variables to initialise
+
+//global variables for new atttempt
 unsigned long *ip_array;
 unsigned int ip_array_size = 20;
-unsigned int ip_array_last = 0; //to find the last non-empty array index
-unsigned int syncount = 0; //global count of synpackets
-unsigned int arpcount = 0; //global count of ARP responses
-unsigned int blacklistcount = 0; //global count of Blacklisted URL violations
+unsigned int ip_array_last = 0; //number of non empty array indexes
 
-//to catch ctrl-c
+//updated in analysis.c
+unsigned int syncount = 0;
+unsigned int arpcount = 0;
+unsigned int blacklistcount = 0;
+
+//catches ctrl-c and prints report
 void  INThandler(int sig)
 {
-  int numberToPrint; //helps to adjust logic for ip_array_last
-  if(ip_array_last == 0){
-    numberToPrint = 0;
-  } else {
-    numberToPrint = ip_array_last+1;
-  }
-  printf("\nIntrusion Detection Report:\n");
-  printf("%d SYN packets detected from %d unique IP addresses\n", syncount, numberToPrint);
-  printf("%d ARP responses (cache poisoning)\n", arpcount);
-  printf("%d URL Blacklist Violations\n", blacklistcount);
-  free(ip_array);
-  exit(0);
+     printf("\nIntrusion Detection Report:\n");
+     printf("%d SYN packets detected from %d unique IP addresses\n", syncount, ip_array_last);
+     printf("%d ARP responses (cache poisoning)\n", arpcount);
+     printf("%d URL Blacklist Violations\n", blacklistcount);
+     free(ip_array);
+     exit(0);
 }
 
 
 // Application main sniffing loop
 void sniff(char *interface, int verbose) {
 
+  //initiate the array with memory
   ip_array = (unsigned long *)malloc(sizeof(unsigned long)*ip_array_size);
 
   char errbuf[PCAP_ERRBUF_SIZE];
@@ -48,8 +46,10 @@ void sniff(char *interface, int verbose) {
     printf("SUCCESS! Opened %s for capture\n", interface);
   }
   
-  signal(SIGINT, INThandler); //calls the ctrl-c handler function
+  //calls handler function for the ctrl-c
+  signal(SIGINT, INThandler);
   
+  //changed to pcap_loop instead of pcap_next
   pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);
    
 }

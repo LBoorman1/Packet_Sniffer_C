@@ -60,6 +60,7 @@ void analyse(struct pcap_pkthdr *header,
   //{{END SECTION: Parsing the packets}}
 
 
+
   //{{SECTION: Checking for SYN attacks}}
   if(tcp_head != NULL){ //check if the tcp header is 
     if(tcp_head->syn && !tcp_head->urg && !tcp_head->ack && !tcp_head->psh && !tcp_head->rst && !tcp_head->fin){ //check if syn bit is active and all other flags are inactive
