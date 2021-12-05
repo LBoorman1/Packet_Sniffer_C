@@ -63,9 +63,8 @@ void analyse(struct pcap_pkthdr *header,
   //{{SECTION: Checking for SYN attacks}}
   if(tcp_head != NULL){ //check if the tcp header is 
     if(tcp_head->syn && !tcp_head->urg && !tcp_head->ack && !tcp_head->psh && !tcp_head->rst && !tcp_head->fin){ //check if syn bit is active and all other flags are inactive
-      syncount++; 
-      
       unsigned long src_addr = (ip_head -> ip_src).s_addr;
+      printf("%lu", src_addr);
 
       //unique ip address to add
       if(array_contains(ip_array, ip_array_size, src_addr) == 0){
@@ -82,6 +81,7 @@ void analyse(struct pcap_pkthdr *header,
           ip_array_last+=1;
         }  
       }
+      syncount++;
 
     }    
   }
@@ -117,7 +117,6 @@ void analyse(struct pcap_pkthdr *header,
             printf("==============================\n");
 
             blacklistcount++;
-            //printf("black");
         }
       }
     }

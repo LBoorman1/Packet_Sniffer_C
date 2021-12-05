@@ -50,7 +50,7 @@ void sniff(char *interface, int verbose) {
   
   signal(SIGINT, INThandler); //calls the ctrl-c handler function
   
-  pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose); //changed to pcap_loop rather than pcap_next
+  pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);
    
 }
 
