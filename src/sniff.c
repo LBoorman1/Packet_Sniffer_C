@@ -7,19 +7,18 @@
 #include <netinet/if_ether.h>
 
 
-
-//global variables for new atttempt
+//global variables to initialise
 unsigned long *ip_array;
 unsigned int ip_array_size = 20;
-unsigned int ip_array_last = 0;
-unsigned int syncount = 0;
-unsigned int arpcount = 0;
-unsigned int blacklistcount = 0;
+unsigned int ip_array_last = 0; //to find the last non-empty array index
+unsigned int syncount = 0; //global count of synpackets
+unsigned int arpcount = 0; //global count of ARP responses
+unsigned int blacklistcount = 0; //global count of Blacklisted URL violations
 
-
+//to catch ctrl-c
 void  INThandler(int sig)
 {
-  int numberToPrint;
+  int numberToPrint; //helps to adjust logic for ip_array_last
   if(ip_array_last == 0){
     numberToPrint = 0;
   } else {
@@ -41,8 +40,6 @@ void sniff(char *interface, int verbose) {
 
   char errbuf[PCAP_ERRBUF_SIZE];
 
-  // Open the specified network interface for packet capture. pcap_open_live() returns the handle to be used for the packet
-  // capturing session. check the man page of pcap_open_live()
   pcap_t *pcap_handle = pcap_open_live(interface, 4096, 1, 1000, errbuf);
   if (pcap_handle == NULL) {
     fprintf(stderr, "Unable to open interface %s\n", errbuf);
@@ -51,16 +48,9 @@ void sniff(char *interface, int verbose) {
     printf("SUCCESS! Opened %s for capture\n", interface);
   }
   
-  signal(SIGINT, INThandler);
+  signal(SIGINT, INThandler); //calls the ctrl-c handler function
   
-  // struct pcap_pkthdr header;
-  // const unsigned char *packet;
-  
-  // Capture packet one packet everytime the loop runs using pcap_next(). This is inefficient.
-  // A more efficient way to capture packets is to use use pcap_loop() instead of pcap_next().
-  // See the man pages of both pcap_loop() and pcap_next().
-
-  pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose);
+  pcap_loop(pcap_handle, -1, (pcap_handler) dispatch, (u_char *) &verbose); //changed to pcap_loop rather than pcap_next
    
 }
 

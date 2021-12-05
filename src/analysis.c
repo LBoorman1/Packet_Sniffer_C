@@ -19,8 +19,6 @@ extern unsigned int syncount;
 extern unsigned int arpcount;
 extern unsigned int blacklistcount;
 
-pthread_mutex_t countlock = PTHREAD_MUTEX_INITIALIZER;
-
 int array_contains(unsigned long *ip_array, unsigned int ip_array_size, unsigned long address){
   for(int i = 0; i <= ip_array_size; i++) {
     if(ip_array[i] == address) return 1;
@@ -30,20 +28,14 @@ int array_contains(unsigned long *ip_array, unsigned int ip_array_size, unsigned
 
 void analyse(struct pcap_pkthdr *header,
   const unsigned char *packet,
-  //const unsigned char *payload_total;
-  int verbose) {
 
-  // //local flags to update global counts
-  // volatile unsigned long syntrue = 0;
-  // volatile unsigned long arptrue = 0;
-  // volatile unsigned long blacklisttrue = 0;
+  int verbose) {
 
   //struct definitions
   struct tcphdr *tcp_head;
   struct ip *ip_head;
   const unsigned char *payload_total;
 
-  
   //{{SECTION: Parsing the packets}}
   struct ether_header *eth_header = (struct ether_header *) packet;
   
@@ -71,7 +63,6 @@ void analyse(struct pcap_pkthdr *header,
   //{{SECTION: Checking for SYN attacks}}
   if(tcp_head != NULL){ //check if the tcp header is 
     if(tcp_head->syn && !tcp_head->urg && !tcp_head->ack && !tcp_head->psh && !tcp_head->rst && !tcp_head->fin){ //check if syn bit is active and all other flags are inactive
-      //printf("Testing");
       syncount++; 
       
       unsigned long src_addr = (ip_head -> ip_src).s_addr;
@@ -132,9 +123,5 @@ void analyse(struct pcap_pkthdr *header,
     }
   }  
   //{{END SECTION: Checking for blacklisted URL}}
-
-
-  //{{SECTION: Adding to global variables safely from thread}}
-
 }
 
